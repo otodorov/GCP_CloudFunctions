@@ -1,11 +1,14 @@
 from google.cloud import container_v1
+from google.api_core import retry
+from google.api_core import exceptions
+
 
 # http://localhost:8080?project=anakatech&zone=europe-west1-d
 
 project = 'netomedia2'
 # label = ('env', 'qa')
 label = ('scale', 'true')
-node_count = 0
+node_number = 0
 
 client = container_v1.ClusterManagerClient()
 
@@ -34,10 +37,11 @@ def list_gke_clusters():
     return cluster_dict
 
 
-list_gke_clusters()
-
-
-def resize_gke_node_pool(cluster: tuple, node_count: int):
+@retry.Retry(initial=1.0,
+             deadline=900.0,
+             predicate=retry.if_exception_type(exceptions.FailedPrecondition)
+             )
+def resize_gke_node_pool(cluster_name, location, pool, node_number):
     '''
     Params:
         cluster: (
@@ -50,20 +54,37 @@ def resize_gke_node_pool(cluster: tuple, node_count: int):
     name string format: "projects/<project>/locations/<location>/clusters/<cluster_name>/nodePools/<node_pool>"
     '''
 
-    for node_pool in cluster[1]['node_pool']:
-        request = container_v1.SetNodePoolSizeRequest(
-            name=f"projects/{project}/locations/{cluster[1]['location'][0]}/clusters/{cluster[0]}/nodePools/{node_pool}",
-            node_count=node_count,
-        )
+    request = container_v1.SetNodePoolSizeRequest(
+        # name=f"projects/{project}/locations/{cluster[1]['location'][0]}/clusters/{cluster[0]}/nodePools/{node_pool}",
+        name=f"projects/{project}/locations/{location}/clusters/{cluster_name}/nodePools/{pool}",
+        node_count=node_number,
+    )
 
-    response = client.set_node_pool_size(request=request)
+    # try:
+    # except RuntimeError as err:
+    #     print(err)
 
+    print(request)
+    response = client.set_node_pool_size(
+        request=request,
+    )
+
+    print(response)
     return response
 
 
 def main():
-    for cluster in list_gke_clusters().items():
-        resize_gke_node_pool(cluster, node_count)
+    for cluster in list_gke_clusters():
+        # print("cluster:", cluster)
+        for pool in list_gke_clusters()[cluster]['node_pool']:
+            cluster_name = cluster
+            location = list_gke_clusters()[cluster]['location'][0]
+            node_pool = pool
+            # print("TEST:", cluster_name, location,
+            #       node_pool, node_number)
+            resize_gke_node_pool(cluster_name, location,
+                                 node_pool, node_number)
 
-
+    # TODO: Fix request retry
+    # TODO: Add multithreading for clusters
 main()
