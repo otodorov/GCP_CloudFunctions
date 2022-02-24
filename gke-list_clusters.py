@@ -7,7 +7,7 @@ from google.api_core import exceptions
 
 project = 'netomedia2'
 # label = ('env', 'qa')
-label = ('scale', 'true')
+label = ('scale', 'true2')
 node_number = 0
 
 client = container_v1.ClusterManagerClient()
@@ -43,28 +43,25 @@ def list_gke_clusters():
              )
 def resize_gke_node_pool(cluster_name, location, pool, node_number):
     '''
-    Params:
-        cluster: (
-            '<cluster_name>', {
-                'location': ['<locations>'],
-                'labels': {'<key1>': '<value1>', '<key2>': '<value2>'},
-                'node_pool': ['<node_pool_1>', '<node_pool_2>']
-                }
-            )
+    Args:
+        cluster_name (string):
+        location (list):
+        labels (string):
+        node_pool (list):
+        '<cluster_name>', {
+            'location': ['<locations>'],
+            'labels': {'<key1>': '<value1>', '<key2>': '<value2>'},
+            'node_pool': ['<node_pool_1>', '<node_pool_2>']
+            }
+
     name string format: "projects/<project>/locations/<location>/clusters/<cluster_name>/nodePools/<node_pool>"
     '''
 
     request = container_v1.SetNodePoolSizeRequest(
-        # name=f"projects/{project}/locations/{cluster[1]['location'][0]}/clusters/{cluster[0]}/nodePools/{node_pool}",
         name=f"projects/{project}/locations/{location}/clusters/{cluster_name}/nodePools/{pool}",
         node_count=node_number,
     )
 
-    # try:
-    # except RuntimeError as err:
-    #     print(err)
-
-    print(request)
     response = client.set_node_pool_size(
         request=request,
     )
@@ -75,13 +72,12 @@ def resize_gke_node_pool(cluster_name, location, pool, node_number):
 
 def main():
     for cluster in list_gke_clusters():
-        # print("cluster:", cluster)
+        print("cluster:", cluster)
         for pool in list_gke_clusters()[cluster]['node_pool']:
             cluster_name = cluster
             location = list_gke_clusters()[cluster]['location'][0]
             node_pool = pool
-            # print("TEST:", cluster_name, location,
-            #       node_pool, node_number)
+
             resize_gke_node_pool(cluster_name, location,
                                  node_pool, node_number)
 
