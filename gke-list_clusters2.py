@@ -7,7 +7,7 @@ from google.api_core import exceptions
 
 project = 'netomedia2'
 # label = ('env', 'qa')
-label = ('scale', 'true')
+label = ('scale', 'true2')
 node_number = 0
 
 client = container_v1.ClusterManagerClient()
@@ -29,7 +29,7 @@ def list_gke_clusters():
     for cluster in response.clusters:
         if (label) in cluster.resource_labels.items():
             cluster_dict[cluster.name] = {
-                "location": cluster.location,
+                "location": cluster.locations,
                 "labels": cluster.resource_labels,
                 "node_pool": [node_pool.name for node_pool in cluster.node_pools],
             }
@@ -66,24 +66,20 @@ def resize_gke_node_pool(cluster_name, location, pool, node_number):
         request=request,
     )
 
-    print(f"""{response.target_link}
-    status: {response.status_message}
-    start_time: {response.start_time}
-    end_time: {response.end_time}
-    """)
+    print(response)
     return response
 
 
 def main():
     for cluster in list_gke_clusters():
+        print("cluster:", cluster)
         for pool in list_gke_clusters()[cluster]['node_pool']:
             cluster_name = cluster
-            location = list_gke_clusters()[cluster]['location']
+            location = list_gke_clusters()[cluster]['location'][0]
             node_pool = pool
 
             resize_gke_node_pool(cluster_name, location,
                                  node_pool, node_number)
-
 
     # TODO: Fix request retry
     # TODO: Add multithreading for clusters
