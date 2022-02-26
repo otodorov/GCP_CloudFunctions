@@ -4,11 +4,8 @@ from google.api_core import retry
 from google.api_core import exceptions
 
 
-# http://localhost:8080?project=anakatech&zone=europe-west1-d
-
 project = 'netomedia2'      # Project where the function will operate
-# label = ('env', 'qa')     # CLusters that have this labels will be targeted
-label = ('scale', 'true')
+label = ('scale', 'true')   # CLusters that have this labels will be targeted
 node_number = 0             # Set desrired number for each Cluster Node Pool
 pool_size = 5               # How many clusters at a time will be scheduled
 
