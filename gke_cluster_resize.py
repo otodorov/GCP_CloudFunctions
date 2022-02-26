@@ -17,7 +17,7 @@ client = container_v1.ClusterManagerClient()
 
 def list_gke_clusters():
     f'''
-    List all clusters with labels and their node pools as a map that have specific label {label}
+    Return all clusters with labels and their node pools as a map that have specific label {label}
     e.g.: {{'<cluster_name>': [['<region>'], {{'key1': 'val1', 'key2': 'val2'}}, '<node_pool_name>']}}
     '''
 
@@ -50,6 +50,12 @@ def resize_gke_node_pool(cluster_name, location, pool, node_number):
         location (string): The name of the Google Compute Engine zone|region
         pool (string): The name of the node pool to set size
         node_number (intiger): The desired node count for the pool.
+
+    Return:
+        cluster_name (string): The name of the cluster that owns the node pool
+        node pool (string): The name of the node pool size
+        location (string): The name of the Google Compute Engine zone|region
+        time (string): The time when the execution started
 
     name string format: "projects/<project>/locations/<location>/clusters/<cluster_name>/nodePools/<node_pool>"
     '''
