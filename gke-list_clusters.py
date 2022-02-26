@@ -44,15 +44,10 @@ def list_gke_clusters():
 def resize_gke_node_pool(cluster_name, location, pool, node_number):
     '''
     Args:
-        cluster_name (string):
-        location (list):
-        labels (string):
-        node_pool (list):
-        '<cluster_name>', {
-            'location': ['<locations>'],
-            'labels': {'<key1>': '<value1>', '<key2>': '<value2>'},
-            'node_pool': ['<node_pool_1>', '<node_pool_2>']
-            }
+        cluster_name (string): The name of the cluster that owns the node pool
+        location (string): The name of the Google Compute Engine zone|region
+        pool (string): The name of the node pool to set size
+        node_number (intiger): The desired node count for the pool.
 
     name string format: "projects/<project>/locations/<location>/clusters/<cluster_name>/nodePools/<node_pool>"
     '''
@@ -66,10 +61,11 @@ def resize_gke_node_pool(cluster_name, location, pool, node_number):
         request=request,
     )
 
-    print(f"""{response.target_link}
-    status: {response.status_message}
-    start_time: {response.start_time}
-    end_time: {response.end_time}
+    print(f"""
+    cluster_name: {cluster_name}
+    node pool: {pool} is set to {node_number}
+    location: {location}
+    time: {response.start_time}
     """)
     return response
 
@@ -85,6 +81,5 @@ def main():
                                  node_pool, node_number)
 
 
-    # TODO: Fix request retry
     # TODO: Add multithreading for clusters
 main()
