@@ -1,3 +1,4 @@
+from multiprocessing.pool import ThreadPool as Pool
 from google.cloud import container_v1
 from google.api_core import retry
 from google.api_core import exceptions
@@ -5,10 +6,11 @@ from google.api_core import exceptions
 
 # http://localhost:8080?project=anakatech&zone=europe-west1-d
 
-project = 'netomedia2'
-# label = ('env', 'qa')
+project = 'netomedia2'      # Project where the function will operate
+# label = ('env', 'qa')     # CLusters that have this labels will be targeted
 label = ('scale', 'true')
-node_number = 0
+node_number = 0             # Set desrired number for each Cluster Node Pool
+pool_size = 5               # How many clusters at a time will be scheduled
 
 client = container_v1.ClusterManagerClient()
 
@@ -71,15 +73,20 @@ def resize_gke_node_pool(cluster_name, location, pool, node_number):
 
 
 def main():
+
+    thread_pool = Pool(pool_size)
+
     for cluster in list_gke_clusters():
         for pool in list_gke_clusters()[cluster]['node_pool']:
             cluster_name = cluster
             location = list_gke_clusters()[cluster]['location']
             node_pool = pool
 
-            resize_gke_node_pool(cluster_name, location,
-                                 node_pool, node_number)
+            thread_pool.apply_async(resize_gke_node_pool, (cluster_name, location,
+                                                           node_pool, node_number))
+
+    thread_pool.close()
+    thread_pool.join()
 
 
-    # TODO: Add multithreading for clusters
 main()
