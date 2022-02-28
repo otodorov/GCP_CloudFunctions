@@ -2,4 +2,4 @@
 
 Name | Description|
 -- | --
-[gke_cluster_resize](./gke_cluster_resize/gke_cluster_resize.py) | Schedule GKE Cluster start/stop based on label
+[gke_cluster_resize](./gke_cluster_resize/) | Schedule GKE Cluster start/stop based on label
