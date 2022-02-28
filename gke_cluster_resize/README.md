@@ -2,15 +2,15 @@
 
 1) Create a PUB/SUB Topic
 
-   ![Create PUB/SUB Topic](./images/gke_cluster_resize_1.PNG)
+   ![Create PUB/SUB Topic](../images/gke_cluster_resize_1.PNG)
 
 2) Create Cloud Function
 
-   ![Create Cloud Function Basics](./images/gke_cluster_resize_2.PNG)
+   ![Create Cloud Function Basics](../images/gke_cluster_resize_2.PNG)
 
-   ![Create Cloud Function Runtime](./images/gke_cluster_resize_3.PNG)
+   ![Create Cloud Function Runtime](../images/gke_cluster_resize_3.PNG)
 
-   ![Create Cloud Function Connections](./images/gke_cluster_resize_4.PNG)
+   ![Create Cloud Function Connections](../images/gke_cluster_resize_4.PNG)
 
 3) Create Cloud Scheduler jobs
 
@@ -21,6 +21,6 @@
 
   The **Key 1** attribute -> Specify here what should be the cluster label. All clusters with that label will be scheduled.
 
-   ![Create Cloud Scheduler job](./images/gke_cluster_resize_5.PNG)
+   ![Create Cloud Scheduler job](../images/gke_cluster_resize_5.PNG)
 
-   ![Create Cloud Scheduler job](./images/gke_cluster_resize_6.PNG)
+   ![Create Cloud Scheduler job](../images/gke_cluster_resize_6.PNG)
