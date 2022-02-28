@@ -12,6 +12,15 @@
 
    ![Create Cloud Function Connections](../images/gke_cluster_resize_4.PNG)
 
+
+  Paste the content of [gke_cluster_resize.py](./gke_cluster_resize/gke_cluster_resize.py) into the `main.py` file in the console and change the **Entry point** to `main`
+
+  Paste the content of [requirements.txt](./gke_cluster_resize/requirements.txt) into `requirements.txt` file in the console.
+
+   ![Create Cloud Function Connections](../images/gke_cluster_resize_7.PNG)
+
+   Then click the **Deploy** button.
+
 3) Create Cloud Scheduler jobs
 
   Create two jobs. One for start and another one for stop clusters.
