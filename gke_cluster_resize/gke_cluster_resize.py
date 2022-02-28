@@ -10,14 +10,20 @@ project = 'netomedia2'      # Project where the function will operate
 client = container_v1.ClusterManagerClient()
 
 
-def list_gke_clusters(client, label):
-    f'''
+def list_gke_clusters(label):
+    '''
     Args:
         label (dict) = A JSON formated label used to match the cluster
 
     Return:
-        all clusters with labels and their node pools as a map that have specific label {label}
-        e.g.: {{'<cluster_name>': [['<region>'], {{'key1': 'val1', 'key2': 'val2'}}, '<node_pool_name>']}}
+        all clusters with labels and their node pools as a map that have specific label
+        e.g.: {
+            '<cluster_name>': [
+                ['<region>'],
+                {'key1': 'val1', 'key2': 'val2'},
+                '<node_pool_name>'
+            ]
+        }
     '''
 
     request = container_v1.ListClustersRequest(
@@ -42,11 +48,12 @@ def list_gke_clusters(client, label):
     return cluster_dict
 
 
-@retry.Retry(initial=1.0,
-             deadline=900.0,
-             predicate=retry.if_exception_type(exceptions.FailedPrecondition)
-             )
-def resize_gke_node_pool(client, cluster_name, location, pool, node_number):
+@retry.Retry(
+    initial=1.0,
+    deadline=900.0,
+    predicate=retry.if_exception_type(exceptions.FailedPrecondition)
+)
+def resize_gke_node_pool(cluster_name, location, pool, node_number):
     '''
     Args:
         cluster_name (string): The name of the cluster that owns the node pool
@@ -99,14 +106,17 @@ def main(event, context):
 
     thread_pool = Pool()
 
-    for cluster in list_gke_clusters(client, label):
-        for pool in list_gke_clusters(client, label)[cluster]['node_pool']:
+    for cluster in list_gke_clusters(label):
+        for pool in list_gke_clusters(label)[cluster]['node_pool']:
             cluster_name = cluster
-            location = list_gke_clusters(client, label)[cluster]['location']
+            location = list_gke_clusters(label)[cluster]['location']
             node_pool = pool
 
-            thread_pool.apply_async(resize_gke_node_pool, (client, cluster_name, location,
-                                                           node_pool, node_number), error_callback=error_callback)
+            thread_pool.apply_async(resize_gke_node_pool, (
+                cluster_name, location,
+                node_pool, node_number
+            ),
+                error_callback=error_callback)
 
     thread_pool.close()
     thread_pool.join()
