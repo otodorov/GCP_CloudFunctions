@@ -1,5 +1,3 @@
-from multiprocessing.pool import ThreadPool as Pool
-from threading import current_thread
 from google.cloud import container_v1
 from google.api_core import retry
 from google.api_core import exceptions
@@ -39,21 +37,23 @@ def list_gke_clusters(label):
     cluster_dict = {}
     for cluster in response.clusters:
         if (label) in cluster.resource_labels.items():
-            cluster_dict[cluster.name] = {
-                "location": cluster.location,
-                "labels": cluster.resource_labels,
-                "node_pool": [node_pool.name for node_pool in cluster.node_pools],
-            }
+            for node_pool in cluster.node_pools:
+                cluster_dict[f"{cluster.name}({node_pool.name})"] = {
+                    "cluster_name": cluster.name,
+                    "location": cluster.location,
+                    "labels": cluster.resource_labels,
+                    "node_pool": node_pool.name
+                }
 
     return cluster_dict
 
 
-@retry.Retry(
+@ retry.Retry(
     initial=1.0,
     deadline=900.0,
     predicate=retry.if_exception_type(exceptions.FailedPrecondition)
 )
-def resize_gke_node_pool(cluster_name, location, pool, node_number):
+def resize_gke_node_pool(cluster_dict, node_number):
     '''
     Args:
         cluster_name (string): The name of the cluster that owns the node pool
@@ -71,7 +71,7 @@ def resize_gke_node_pool(cluster_name, location, pool, node_number):
     '''
 
     request = container_v1.SetNodePoolSizeRequest(
-        name=f"projects/{project}/locations/{location}/clusters/{cluster_name}/nodePools/{pool}",
+        name=f"projects/{project}/locations/{cluster_dict['location']}/clusters/{cluster_dict['cluster_name']}/nodePools/{cluster_dict['node_pool']}",
         node_count=node_number,
     )
 
@@ -80,20 +80,12 @@ def resize_gke_node_pool(cluster_name, location, pool, node_number):
     )
 
     print(f"""
-    current_process: {current_thread()}
-    cluster_name: {cluster_name}
-    node pool: {pool} is set to {node_number}
-    location: {location}
+    cluster_name: {cluster_dict['cluster_name']}
+    node pool: {cluster_dict['node_pool']} is set to {node_number}
+    location: {cluster_dict['location']}
     time: {response.start_time}
     """)
     return response
-
-
-def error_callback(exception):
-    '''
-    Return Thread pool exceptions if any
-    '''
-    print(exception)
 
 
 def main(event, context):
@@ -104,22 +96,8 @@ def main(event, context):
         # Set desrired number for each Cluster Node Pool
         node_number = int(event['attributes']['node_number'])
 
-    thread_pool = Pool()
-
     for cluster in list_gke_clusters(label):
-        for pool in list_gke_clusters(label)[cluster]['node_pool']:
-            cluster_name = cluster
-            location = list_gke_clusters(label)[cluster]['location']
-            node_pool = pool
-
-            thread_pool.apply_async(resize_gke_node_pool, (
-                cluster_name, location,
-                node_pool, node_number
-            ),
-                error_callback=error_callback)
-
-    thread_pool.close()
-    thread_pool.join()
+        resize_gke_node_pool(list_gke_clusters(label)[cluster], node_number)
 
 
 if __name__ == '__main__':
