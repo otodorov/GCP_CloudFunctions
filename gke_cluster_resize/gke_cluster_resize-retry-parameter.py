@@ -50,7 +50,6 @@ def list_gke_clusters(label: str) -> dict:
     return cluster_dict
 
 
-@retry_async.AsyncRetry(initial=1.0, deadline=900.0, predicate=retry_async.if_exception_type(exceptions.FailedPrecondition))
 async def resize_gke_node_pool(cluster_dict: dict, node_number: int):
     '''
     Args:
@@ -73,8 +72,14 @@ async def resize_gke_node_pool(cluster_dict: dict, node_number: int):
         node_count=node_number,
     )
 
-    response = client.set_node_pool_size(
-        request=request
+    response = await client.set_node_pool_size(
+        request=request,
+        retry=retry_async.AsyncRetry(
+            initial=1.0,
+            deadline=900.0,
+            predicate=retry_async.if_exception_type(
+                exceptions.FailedPrecondition)
+        )
     )
 
     print(f"""
@@ -107,7 +112,7 @@ if __name__ == '__main__':
     event = {
         "attributes": {
             "label": "scale=true",
-            "node_number": "0"
+            "node_number": "1"
         }
     }
     main(event, context=None)
