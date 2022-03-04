@@ -1,7 +1,6 @@
-from multiprocessing.pool import ThreadPool as Pool
-from threading import current_thread
+import asyncio
 from google.cloud import container_v1
-from google.api_core import retry
+from google.api_core import retry_async
 from google.api_core import exceptions
 
 
@@ -10,20 +9,21 @@ project = 'netomedia2'      # Project where the function will operate
 client = container_v1.ClusterManagerClient()
 
 
-def list_gke_clusters(label):
+def list_gke_clusters(label: str) -> dict:
     '''
     Args:
-        label (dict) = A JSON formated label used to match the cluster
+        label (str) = String in format <key=value> label used to match the cluster
 
     Return:
         all clusters with labels and their node pools as a map that have specific label
         e.g.: {
-            '<cluster_name>': [
-                ['<region>'],
-                {'key1': 'val1', 'key2': 'val2'},
-                '<node_pool_name>'
-            ]
-        }
+                '<cluster_name>-<node_pool_name>': {
+                    "cluster_name": "<cluster_name>",
+                    "location": "<location>",
+                    "labels": "{'key1': 'val1', 'key2': 'val2'}",
+                    "node_pool": "<node_pool_name>"
+                }
+            }
     '''
 
     request = container_v1.ListClustersRequest(
@@ -39,21 +39,19 @@ def list_gke_clusters(label):
     cluster_dict = {}
     for cluster in response.clusters:
         if (label) in cluster.resource_labels.items():
-            cluster_dict[cluster.name] = {
-                "location": cluster.location,
-                "labels": cluster.resource_labels,
-                "node_pool": [node_pool.name for node_pool in cluster.node_pools],
-            }
+            for node_pool in cluster.node_pools:
+                cluster_dict[f"{cluster.name}({node_pool.name})"] = {
+                    "cluster_name": cluster.name,
+                    "location": cluster.location,
+                    "labels": cluster.resource_labels,
+                    "node_pool": node_pool.name
+                }
 
     return cluster_dict
 
 
-@retry.Retry(
-    initial=1.0,
-    deadline=900.0,
-    predicate=retry.if_exception_type(exceptions.FailedPrecondition)
-)
-def resize_gke_node_pool(cluster_name, location, pool, node_number):
+@retry_async.AsyncRetry(initial=1.0, deadline=900.0, predicate=retry_async.if_exception_type(exceptions.FailedPrecondition))
+async def resize_gke_node_pool(cluster_dict: dict, node_number: int):
     '''
     Args:
         cluster_name (string): The name of the cluster that owns the node pool
@@ -71,55 +69,38 @@ def resize_gke_node_pool(cluster_name, location, pool, node_number):
     '''
 
     request = container_v1.SetNodePoolSizeRequest(
-        name=f"projects/{project}/locations/{location}/clusters/{cluster_name}/nodePools/{pool}",
+        name=f"projects/{project}/locations/{cluster_dict['location']}/clusters/{cluster_dict['cluster_name']}/nodePools/{cluster_dict['node_pool']}",
         node_count=node_number,
     )
 
     response = client.set_node_pool_size(
-        request=request,
+        request=request
     )
 
     print(f"""
-    current_process: {current_thread()}
-    cluster_name: {cluster_name}
-    node pool: {pool} is set to {node_number}
-    location: {location}
-    time: {response.start_time}
+    cluster_name: {cluster_dict['cluster_name']}
+    node pool: {cluster_dict['node_pool']} is set to {node_number}
+    location: {cluster_dict['location']}
     """)
+
     return response
 
 
-def error_callback(exception):
-    '''
-    Return Thread pool exceptions if any
-    '''
-    print(exception)
-
-
-def main(event, context):
-
+async def execute(event):
     if 'attributes' in event:
         # CLusters that have this labels will be targeted
         label = event['attributes']['label']
         # Set desrired number for each Cluster Node Pool
         node_number = int(event['attributes']['node_number'])
 
-    thread_pool = Pool()
+        cluster_list = [list_gke_clusters(label)[cluster]
+                        for cluster in list_gke_clusters(label)]
 
-    for cluster in list_gke_clusters(label):
-        for pool in list_gke_clusters(label)[cluster]['node_pool']:
-            cluster_name = cluster
-            location = list_gke_clusters(label)[cluster]['location']
-            node_pool = pool
+        await asyncio.gather(*[resize_gke_node_pool(cluster, node_number) for cluster in cluster_list])
 
-            thread_pool.apply_async(resize_gke_node_pool, (
-                cluster_name, location,
-                node_pool, node_number
-            ),
-                error_callback=error_callback)
 
-    thread_pool.close()
-    thread_pool.join()
+def main(event, context):
+    asyncio.run(execute(event))
 
 
 if __name__ == '__main__':
