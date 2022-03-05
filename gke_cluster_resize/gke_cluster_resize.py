@@ -4,7 +4,7 @@ from google.api_core import retry_async
 from google.api_core import exceptions
 
 
-project = 'netomedia2'      # Project where the function will operate
+PROJECT = 'netomedia2'      # Project where the function will operate
 
 client = container_v1.ClusterManagerClient()
 
@@ -27,7 +27,7 @@ def list_gke_clusters(label: str) -> dict:
     '''
 
     request = container_v1.ListClustersRequest(
-        parent=f"projects/{project}/locations/-"
+        parent=f"projects/{PROJECT}/locations/-"
     )
 
     response = client.list_clusters(request=request)
@@ -69,7 +69,7 @@ async def resize_gke_node_pool(cluster_dict: dict, node_number: int):
     '''
 
     request = container_v1.SetNodePoolSizeRequest(
-        name=f"projects/{project}/locations/{cluster_dict['location']}/clusters/{cluster_dict['cluster_name']}/nodePools/{cluster_dict['node_pool']}",
+        name=f"projects/{PROJECT}/locations/{cluster_dict['location']}/clusters/{cluster_dict['cluster_name']}/nodePools/{cluster_dict['node_pool']}",
         node_count=node_number,
     )
 
