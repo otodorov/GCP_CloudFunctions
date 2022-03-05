@@ -51,7 +51,7 @@ def list_gke_clusters(label: str) -> dict:
 
 
 @retry_async.AsyncRetry(initial=1.0, deadline=900.0, predicate=retry_async.if_exception_type(exceptions.FailedPrecondition))
-async def resize_gke_node_pool(cluster_dict: dict, node_number: int):
+async def resize_gke_node_pool(cluster_dict: dict, node_number: int) -> container_v1.types.ListClustersResponse:
     '''
     Args:
         cluster_name (string): The name of the cluster that owns the node pool
@@ -86,7 +86,7 @@ async def resize_gke_node_pool(cluster_dict: dict, node_number: int):
     return response
 
 
-async def execute(event):
+async def execute(event) -> None:
     if 'attributes' in event:
         # CLusters that have this labels will be targeted
         label = event['attributes']['label']
