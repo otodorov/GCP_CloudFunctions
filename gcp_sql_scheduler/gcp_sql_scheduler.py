@@ -24,9 +24,6 @@ def list_sql_instances(label: str, policy_filter: str) -> list:
 
     # list all SQL instances in the project
     sql_instances = sql_client.instances().list(project=project_id, filter=f"state:RUNNABLE {policy_filter}").execute()
-    label_key = label.split('=')[0]
-    label_value = label.split('=')[1]
-    label = (label_key, label_value)
 
     # filter the instances by the given labels
     sql_instance_list = []
@@ -37,19 +34,20 @@ def list_sql_instances(label: str, policy_filter: str) -> list:
     return sql_instance_list
 
 @retry_async.AsyncRetry(initial=1.0, deadline=900.0, predicate=retry_async.if_exception_type(exceptions.FailedPrecondition))
-async def start_stop_instance(event: dict) -> None:
+async def start_stop_instance(label: str, action: str) -> None:
     """
     Starts or stops a Cloud SQL instance based on the given event.
 
     Args:
-        event: dict with keys 'attributes' (dict) and 'action' (string)
+        label (string): String representing SQL instance labels in format key=value
+        action (string): String representing instance state start/stop
 
     Return:
         None
     """
-    # extract the attributes and action from the event
-    attributes = event['attributes']
-    action = event['action']
+    label_key = label.split('=')[0]
+    label_value = label.split('=')[1]
+    label = (label_key, label_value)
 
     if action == 'start':
         policy = 'ALWAYS'
@@ -58,7 +56,7 @@ async def start_stop_instance(event: dict) -> None:
         policy = 'NEVER'
         policy_filter = 'settings.activationPolicy:ALWAYS'
 
-    sql_instances = list_sql_instances(attributes['label'], policy_filter)
+    sql_instances = list_sql_instances(label, policy_filter)
     print(f"List of SQL instances for {action}:", sql_instances)
 
     database_instance_body = {
@@ -80,11 +78,20 @@ async def execute(event: dict) -> None:
     Return:
         None
     """
-    await start_stop_instance(event)
+    if 'attributes' in event:
+        # SQL Instances that have this labels will be targeted
+        label = event['attributes']['label']
+        action = event['attributes']['action']
+    await start_stop_instance(label, action)
 
 def main(event, context):
     asyncio.run(execute(event))
 
 if __name__ == '__main__':
-    event = {'attributes': {'label': 'scale=true'}, 'action': 'stop'}
+    event = {
+        "attributes": {
+            "label": "scale=true",
+            "action": "stop"
+        }
+    }
     main(event, None)
