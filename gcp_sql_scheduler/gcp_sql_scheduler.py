@@ -29,9 +29,31 @@ def list_sql_instances(label: str, policy_filter: str) -> list:
     sql_instance_list = []
     if sql_instances:
         for instance in sql_instances['items']:
-            if (label) in instance['settings']['userLabels'].items():
+            if (label) in instance['settings']['userLabels'].items() and sql_operation(instance['name']) == 'DONE':
                 sql_instance_list.append(instance['name'])
     return sql_instance_list
+
+def sql_operation(sql_instance) -> str:
+    '''
+    Return SQL operations
+
+    Args:
+        sql_instance (string): String representing SQL instance
+
+    Return:
+        operation['status'] (string): SqlOperationStatus can be one of the following:
+                                        SQL_OPERATION_STATUS_UNSPECIFIED 	The state of the operation is unknown.
+                                        PENDING 	The operation has been queued, but has not started yet.
+                                        RUNNING 	The operation is running.
+                                        DONE 	The operation completed.
+    '''
+
+    request = sql_client.operations().list(project=project_id, instance=sql_instance, maxResults=1)
+    if request is not None:
+        response = request.execute()
+
+        for operation in response['items']:
+            return operation['status']
 
 @retry_async.AsyncRetry(initial=1.0, deadline=900.0, predicate=retry_async.if_exception_type(exceptions.FailedPrecondition))
 async def start_stop_instance(label: str, action: str) -> None:
@@ -58,6 +80,7 @@ async def start_stop_instance(label: str, action: str) -> None:
 
     sql_instances = list_sql_instances(label, policy_filter)
     print(f"List of SQL instances for {action}:", sql_instances)
+    print("SQL Instances that are not in that list cannot be STOP/START because they are not RUNNABLE or have pending operations!")
 
     database_instance_body = {
         "settings": {
